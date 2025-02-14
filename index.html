@@ -83,6 +83,7 @@
             #inputArea {
                 font-size: 17px;
                 min-height: 150px;
+                -webkit-overflow-scrolling: touch; /* 优化iOS滚动 */
             }
         }
     </style>
@@ -171,6 +172,78 @@
         inputArea.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = this.scrollHeight + 'px';
+        });
+    </script>
+    <script>
+        // 在原有代码基础上新增以下优化
+
+        // 处理键盘回车键
+        inputArea.addEventListener('keydown', function(e) {
+            // 检测iOS设备且按下回车键
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent) && e.key === 'Enter') {
+                e.preventDefault();
+                this.blur(); // 收起键盘
+            }
+        });
+
+        // 修改粘贴按钮事件处理
+        pasteBtn.addEventListener('click', async () => {
+            errorTip.style.display = 'none';
+            
+            try {
+                if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                    const tempInput = document.createElement('input');
+                    tempInput.style.cssText = 'position:fixed;opacity:0;';
+                    document.body.appendChild(tempInput);
+                    
+                    try {
+                        tempInput.focus();
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                        
+                        tempInput.select();
+                        document.execCommand('paste');
+                        const pastedText = tempInput.value;
+                        
+                        if (pastedText) {
+                            inputArea.value = pastedText;
+                            updateQRCode(pastedText);
+                            // 新增键盘收起逻辑
+                            setTimeout(() => {
+                                inputArea.blur();
+                                document.activeElement.blur();
+                            }, 100);
+                        }
+                    } finally {
+                        document.body.removeChild(tempInput);
+                        // 确保焦点移除
+                        setTimeout(() => {
+                            window.scrollTo(0, 0);
+                        }, 50);
+                    }
+                } else {
+                    const text = await navigator.clipboard.readText();
+                    inputArea.value = text;
+                    updateQRCode(text);
+                    inputArea.blur(); // 非iOS设备也添加收起逻辑
+                }
+            } catch (error) {
+                errorTip.style.display = 'block';
+                inputArea.blur(); // 失败时也尝试收起键盘
+            }
+        });
+
+        // 新增触摸事件处理
+        let lastTouchTime = 0;
+        document.addEventListener('touchend', (e) => {
+            // 检测点击区域是否在输入框外
+            if (!inputArea.contains(e.target)) {
+                const now = Date.now();
+                // 防止与点击事件冲突
+                if (now - lastTouchTime > 100) {
+                    inputArea.blur();
+                }
+            }
+            lastTouchTime = Date.now();
         });
     </script>
 </body>
