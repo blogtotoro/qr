@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>实时二维码生成器</title>
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <title>智能二维码生成器</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body {
             display: flex;
@@ -13,90 +13,151 @@
             min-height: 100vh;
             margin: 0;
             padding: 20px;
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, system-ui, sans-serif;
+            background: #f5f5f5;
         }
 
         .input-group {
-            width: 80%;
-            max-width: 500px;
+            width: 90%;
+            max-width: 600px;
             margin: 20px 0;
             display: flex;
-            gap: 10px;
+            gap: 12px;
         }
 
         #inputArea {
             flex: 1;
-            padding: 12px;
+            padding: 15px;
             font-size: 16px;
             border: 2px solid #007bff;
-            border-radius: 8px;
+            border-radius: 12px;
             outline: none;
+            resize: vertical;
+            min-height: 120px;
+            background: white;
         }
 
         #pasteBtn {
-            padding: 12px 20px;
+            padding: 12px 24px;
             background: #007bff;
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.2s ease;
+            font-size: 16px;
+            white-space: nowrap;
         }
 
         #pasteBtn:hover {
             background: #0056b3;
+            transform: translateY(-1px);
         }
 
         #qrcode {
             margin-top: 30px;
             padding: 20px;
-            background: #fff;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border-radius: 8px;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-radius: 12px;
+        }
+
+        .error-tip {
+            color: #dc3545;
+            margin-top: 10px;
+            font-size: 14px;
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            .input-group {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            #pasteBtn {
+                padding: 15px;
+                font-size: 17px;
+            }
+            
+            #inputArea {
+                font-size: 17px;
+                min-height: 150px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="input-group">
         <textarea id="inputArea" 
-                  placeholder="输入文本内容，实时生成二维码..."
+                  placeholder="输入或粘贴文本内容，实时生成二维码..."
                   autofocus></textarea>
-        <button id="pasteBtn">粘贴</button>
+        <button id="pasteBtn">📋 粘贴</button>
     </div>
+    <div class="error-tip" id="errorTip">自动粘贴失败，请长按输入框手动粘贴</div>
     <div id="qrcode"></div>
 
     <script>
         // 初始化二维码生成器
         const qr = new QRCode(document.getElementById("qrcode"), {
-            width: 200,
-            height: 200,
-            colorDark: "#000000",
+            width: 220,
+            height: 220,
+            colorDark: "#2c3e50",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
         });
 
-        // 获取DOM元素
+        // DOM元素
         const inputArea = document.getElementById("inputArea");
         const pasteBtn = document.getElementById("pasteBtn");
+        const errorTip = document.getElementById("errorTip");
 
         // 实时输入监听
         inputArea.addEventListener('input', function(e) {
             updateQRCode(e.target.value.trim());
         });
 
-        // 粘贴按钮点击处理
+        // 增强版粘贴处理
         pasteBtn.addEventListener('click', async () => {
+            errorTip.style.display = 'none';
+            
             try {
-                const text = await navigator.clipboard.readText();
-                inputArea.value = text;
-                updateQRCode(text);
+                // iOS特殊处理
+                if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                    const tempInput = document.createElement('input');
+                    tempInput.style.cssText = 'position:fixed;opacity:0;';
+                    document.body.appendChild(tempInput);
+                    
+                    try {
+                        tempInput.focus();
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                        
+                        tempInput.select();
+                        document.execCommand('paste');
+                        const pastedText = tempInput.value;
+                        
+                        if (pastedText) {
+                            inputArea.value = pastedText;
+                            updateQRCode(pastedText);
+                            inputArea.focus();
+                        }
+                    } finally {
+                        document.body.removeChild(tempInput);
+                    }
+                } else {
+                    // 现代浏览器处理
+                    const text = await navigator.clipboard.readText();
+                    inputArea.value = text;
+                    updateQRCode(text);
+                    inputArea.focus();
+                }
+            } catch (error) {
+                errorTip.style.display = 'block';
                 inputArea.focus();
-            } catch (err) {
-                alert('无法读取剪贴板内容，请确保已授予权限');
             }
         });
 
-        // 统一更新二维码方法
+        // 二维码更新方法
         function updateQRCode(content) {
             if (content) {
                 qr.clear();
@@ -105,6 +166,12 @@
                 document.getElementById("qrcode").innerHTML = '';
             }
         }
+
+        // 自动高度调整
+        inputArea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
     </script>
 </body>
 </html>
