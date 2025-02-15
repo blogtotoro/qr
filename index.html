@@ -129,16 +129,24 @@
             updateUI(content);
         });
 
+        // 新增回车键处理
+        inputArea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                e.preventDefault();
+                this.blur();
+            }
+        });
+
         pasteBtn.addEventListener('click', async () => {
             errorTip.style.display = 'none';
             try {
                 const text = await navigator.clipboard.readText();
                 inputArea.value = text;
                 updateUI(text.trim());
-                inputArea.focus();
+                inputArea.blur(); // 修改为失去焦点
             } catch (error) {
                 errorTip.style.display = 'block';
-                inputArea.focus();
+                inputArea.blur(); // 修改为失去焦点
             }
         });
 
