@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能二维码生成器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, system-ui, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .input-group {
+            width: 90%;
+            max-width: 600px;
+            margin: 20px 0;
+            display: flex;
+            gap: 12px;
+        }
+
+        #inputArea {
+            flex: 1;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #007bff;
+            border-radius: 12px;
+            outline: none;
+            resize: vertical;
+            min-height: 120px;
+            background: white;
+        }
+
+        #pasteBtn {
+            padding: 12px 24px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 16px;
+            white-space: nowrap;
+        }
+
+        #pasteBtn:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        #qrcode {
+            margin-top: 30px;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-radius: 12px;
+        }
+
+        .error-tip {
+            color: #dc3545;
+            margin-top: 10px;
+            font-size: 14px;
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            .input-group {
+                flex-direction: column;
+                width: 100%;
+            }
+            #pasteBtn {
+                padding: 15px;
+                font-size: 17px;
+            }
+            #inputArea {
+                font-size: 17px;
+                min-height: 150px;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="input-group">
+        <textarea id="inputArea" 
+                  placeholder="输入或粘贴文本内容，实时生成二维码..."
+                  maxlength="2000"
+                  autofocus></textarea>
+        <button id="pasteBtn">📋 粘贴</button>
+    </div>
+    <div class="error-tip" id="errorTip" style="display:none;">自动粘贴失败，请长按输入框手动粘贴</div>
+    <div class="error-tip" id="charLimitTip" style="display:none;">字符数超过限制（2000字符），请减少文本量。</div>
+    <div id="qrcode"></div>
+
+    <script>
+        const qr = new QRCode(document.getElementById("qrcode"), {
+            width: 220,
+            height: 220,
+            colorDark: "#2c3e50",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+
+        const inputArea = document.getElementById("inputArea");
+        const pasteBtn = document.getElementById("pasteBtn");
+        const errorTip = document.getElementById("errorTip");
+        const charLimitTip = document.getElementById("charLimitTip");
+
+        function updateUI(content) {
+            if (content.length <= 2000) {
+                inputArea.style.borderColor = "#007bff";
+                charLimitTip.style.display = 'none';
+                updateQRCode(content);
+            } else {
+                inputArea.style.borderColor = "red";
+                charLimitTip.style.display = 'block';
+                qr.clear();
+            }
+        }
+
+        inputArea.addEventListener('input', function(e) {
+            const content = e.target.value.trim();
+            updateUI(content);
+        });
+
+        pasteBtn.addEventListener('click', async () => {
+            errorTip.style.display = 'none';
+            try {
+                const text = await navigator.clipboard.readText();
+                inputArea.value = text;
+                updateUI(text.trim());
+                inputArea.focus();
+            } catch (error) {
+                errorTip.style.display = 'block';
+                inputArea.focus();
+            }
+        });
+
+        function updateQRCode(content) {
+            if (content.length <= 2000) {
+                qr.clear();
+                qr.makeCode(content);
+            }
+        }
+
+        inputArea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+
+        inputArea.addEventListener('blur', function() {
+            window.scrollTo(0, 0);
+        });
+
+        let lastTouchTime = 0;
+        document.addEventListener('touchend', (e) => {
+            if (!inputArea.contains(e.target)) {
+                const now = Date.now();
+                if (now - lastTouchTime > 100) {
+                    inputArea.blur();
+                }
+            }
+            lastTouchTime = Date.now();
+        });
+    </script>
+</body>
+</html>
